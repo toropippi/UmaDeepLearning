@@ -1,0 +1,49 @@
+#include "hspcv.as"
+#include "hsp3util.as"
+s5=dir_cur
+sgr=s5+"\\gr"
+sz=64
+
+dirlist fldlist,"*.*",5
+notesel fldlist
+num=noteinfo(0)
+note2array fldarray,fldlist
+
+	repeat num
+	chdir s5
+	if fldarray.cnt=="gr":continue
+	chdir fldarray.cnt
+	
+	dirlist flelist,"*.png",3
+	notesel flelist
+	fnum=noteinfo(0)
+	note2array flearray,flelist
+		repeat fnum
+		await 1
+		gsel 0
+		strrep flearray.cnt,"\n",""
+		picload flearray.cnt
+		redraw 1
+		await 1
+		gosub*main2
+		loop
+	loop
+
+chdir s5
+end
+
+
+*main2
+	buffer 1,sz,sz
+	x=0,161,323,81,243,0,159,317,74,235
+	y=0,0,0,179,179,357,357,357,533,533
+
+		repeat 10
+		pos 0,0
+		gcopy 0,92+x.cnt,130+y.cnt,sz,sz
+		cvbuffer 0,sz,sz
+		cvputimg 0
+		cvsave sgr+"\\zz"+(pcnt)+".png",0
+		pcnt++
+		loop
+	return
