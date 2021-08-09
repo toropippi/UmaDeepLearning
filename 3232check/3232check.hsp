@@ -1,0 +1,149 @@
+#include "hspcl64.as"
+#include "hsp3util.as"
+HCLinit
+
+gosub*clf0
+wait 5
+
+s5f=dir_cur
+dirlist umalist,"*.*",5
+notesel umalist
+umanum=noteinfo(0)
+note2array umaar,umalist
+pcnt=0
+sdim pcnttos5,128,150
+
+	repeat umanum
+	if umaar.cnt=="gr":continue
+	cdu=s5f+"\\"+umaar.cnt
+	chdir cdu
+	dirlist rsrssrlist,"*.*",5
+	notesel rsrssrlist
+	rsrssrnum=noteinfo(0)
+	note2array rsrssr,rsrssrlist
+		repeat rsrssrnum
+		strrep rsrssr.cnt,"\n",""
+		chdir cdu+"\\"+rsrssr.cnt
+		pcnttos5.pcnt=cdu+"\\"+rsrssr.cnt
+		gosub*setclb
+		pcnt++
+		loop
+	loop
+
+gosub*mainr
+
+end
+
+
+
+*setclb
+	s5=dir_cur
+	dirlist p1,"*.png",1
+	notesel p1
+	noteget p2,0
+	buffer 1:picload p2
+	
+	buffer 2,32,32
+	pos 0,0
+	gcopy 1,16,16,32,32
+	dim b2,32*32*3/4
+	mref i2,66
+	memcpy b2,i2,3072
+	HCLWriteBuffer a2all,b2,32*32*3,32*32*3*pcnt,0
+	return
+
+
+*mainr
+	buffer 3,64,64
+	mref i3,66
+	gosub*clf
+	
+	chdir s5f+"\\"+"gr"
+		repeat 1000000
+		exist "zz"+cnt+".png"
+		if strsize!=-1{
+			gsel 0
+			title ""+cnt+""
+			gsel 3
+			pos 0,0:picload "zz"+cnt+".png",1
+
+			gosub*clc
+	
+			if mndx!=-1{
+				bcopy "zz"+cnt+".png",pcnttos5.mndx+"\\zz"+cnt+".png"
+				delete "zz"+cnt+".png"
+			}
+			await 1
+		}
+		loop
+
+	return
+
+
+
+
+*clf0
+	a3=HCLCreateBuffer(64*64*3)
+	a2all=HCLCreateBuffer(32*32*3*150)
+	c=HCLCreateBuffer(4*150)
+	pstr={"
+__kernel void vecAdd(__global uchar* a2all,__global uchar* a3,__global uint* c)
+{
+    uint gid = get_global_id(0);
+    uint pcnt= gid/1024;
+    gid%=1024;
+    int x=gid%32;//‚¸‚ê‚é‚Ô‚ñ
+    int y=gid/32;//‚¸‚ê‚é‚Ô‚ñ
+	
+    uint sc=0;
+	
+    for(int i=0;i<32;i++)
+    {
+	    for(int j=0;j<32;j++)
+	    {
+		    int idx=(j+i*32)*3+pcnt*32*32*3;
+		    int i0=a2all[idx+0];
+		    int i1=a2all[idx+1];
+		    int i2=a2all[idx+2];
+			
+		    idx=(j+x+(i+y)*64)*3;
+		    int i3=a3[idx+0];
+		    int i4=a3[idx+1];
+		    int i5=a3[idx+2];
+			
+		    sc+=abs(i0-i3)+abs(i1-i4)+abs(i2-i5);
+		}
+	}
+    
+	atomic_min(&c[pcnt],sc);
+}
+
+
+"}
+	prg = HCLCreateProgramWithSource(pstr)
+	krn=HCLCreateKernel(prg,"vecAdd")
+	return
+
+
+
+
+*clf
+	a2=HCLCreateBufferFrom(b2)
+	HCLSetKrns krn,a2all,a3,c
+	return
+
+*clc
+	HCLWriteBuffer a3,i3
+	HCLFillBuffer_i32 c,2100000000
+	HCLDokrn1 krn,32*32*pcnt,32
+
+	HCLdim_i32FromBuffer a2rray,c
+	mnval=21000
+	mndx=-1
+		repeat pcnt
+		if mnval>a2rray.cnt{
+			mnval=a2rray.cnt
+			mndx=cnt
+		}
+		loop
+	return
