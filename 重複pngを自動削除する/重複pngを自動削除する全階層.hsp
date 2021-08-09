@@ -1,0 +1,33 @@
+#include "hsp3util.as"
+
+//bcopy s5+"\\重複pngを自動削除する.exe",""
+
+
+dirlist p1,"*.*",5
+notesel p1
+num=noteinfo(0)
+note2array a1,p1
+s5=dir_cur
+
+	repeat num
+	chdir s5
+	chdir a1.cnt
+	dirlist p2,"*.*",5
+	notesel p2
+	num2=noteinfo(0)
+	note2array a2,p2
+	s6=dir_cur
+		repeat num2
+		chdir s6
+		strrep a2.cnt,"\n",""
+		chdir a2.cnt
+
+		wait 10
+		bcopy s5+"\\重複pngを自動削除する.exe",dir_cur+"\\重複pngを自動削除する.exe"
+		wait 10
+		exec "重複pngを自動削除する.exe"
+		wait 60
+		loop
+	loop
+
+end
